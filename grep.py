@@ -7,11 +7,31 @@ import re
 #вывод строк
 def output(line):
     print(line)
-mas_n=[]
-mas_pattern=[]
 
 
-mas=[] #массив строк
+
+mas=[] #массив стро
+def reg_compile(params):
+    i=0
+    before1=''
+    k=0
+    while i<len(params):
+        if (params[i]=="?") or (params[i]=="*"):
+            k+=1
+            before=before1
+            if i<(len(params)-1):
+                after=params[i+1]
+            else:
+                after=''
+        else:
+            before1=params[i]
+        i+=1
+    if "?" in params:
+        search_str=re.compile('%s([A-Za-z0-9]){%s}%s'%(before, k, after))
+    elif "*" in params:
+        search_str=re.compile('%s([A-Za-z0-9])+%s'%(before, after))
+    regexp=re.compile(search_str)
+    return(regexp)
 
 def match(lines, params):
     if params.ignore_case:
@@ -23,22 +43,7 @@ def match(lines, params):
     before1=''
     k=0
     if ("?" in param) or ("*" in param):
-        while i<len(param):
-            if (param[i]=="?") or (param[i]=="*"):
-                k+=1
-                before=before1
-                if i<(len(param)-1):
-                    after=param[i+1]
-                else:
-                    after=''
-            else:
-                before1=param[i]
-            i+=1 
-        if "?" in param:
-            search_str=re.compile('%s([A-Za-z0-9]){%s}%s'%(before,k,after))
-        elif "*" in param:
-            search_str=re.compile('%s([A-Za-z0-9])+%s'%(before,after))
-        regexp=re.compile(search_str)
+        regexp=reg_compile(param)
         if regexp.findall(line):
             return(True)
 
@@ -70,11 +75,7 @@ def grep(lines, params):
         num+=1
         n=params.line_number
         line = line.rstrip() 
-        mas_pattern.append(str(num))
-        mas_pattern.append(":")
-        mas_pattern.append(line)
-        line_pattern=''.join(mas_pattern)
-        mas_pattern.clear()
+        line_pattern='{0}{1}{2}'.format(str(num), ":", line)
         if(match(line,params)):
 
             if not params.count:
@@ -92,12 +93,8 @@ def grep(lines, params):
                 output(line3) if n else output(line)
                 counter_after_match-=1
             else:
-                mas_n.append(str(num))
-                mas_n.append("-")
-                mas_n.append(line)
-                line_n=''.join(mas_n)
+                line_n='{0}{1}{2}'.format(str(num), "-", line)
                 mas.append(line_n) if n else mas.append(line)
-                mas_n.clear()
  
         if len(mas)>params.before_context:
             mas.pop(0)

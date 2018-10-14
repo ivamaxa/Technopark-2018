@@ -2,7 +2,7 @@
 #hash_log-хэш логов, ключи hash_log- урлы, сортируем их
 import re
 from datetime import datetime
-
+from collections import Counter
 
 
 def parse(
@@ -15,93 +15,66 @@ def parse(
     slow_queries=False
 ):
     mas=[]
-    url={}
-    slow_url={} #cловарь урлов с медленными запросами(для сравнения)
-    url_sum_time={} #словарь урлов с суммарным временем
-    url2={} #доп словарь урлов ? 
-    k=0
+    result=[]
+    mas_time=[]
+    
     f=open('log.log')
     for line in f:
-        line_res='' #url строка прошедшая через модификаторы 
-        result=re.search(r'\[(\S+\s+\S+)\]\s+\"(\S+)\s+https?(\:\/\/[\w\.]+\.[a-z\.]+[\/\w\.]*\-*\w+\=*\-*\.*\w+\.*\w*\.*)*', line) 
-        result1=re.search(r'\s+(\S+)\/\S+\"\s+(\S+)\s+(\S+)', line)
-        if result:
-            re_date=result.group(1).rstrip()
-            re_type=result.group(2).rstrip()
-            line_url=result.group(3).rstrip()
-            if result1:
-                response_time=result1.group(3).rstrip()
-                protocol=result1.group(1).rstrip()
-                re_code=result1.group(2).rstrip()
+        
+        pars_str=re.search(r'\[(\S+\s+\S+)\]\s+\"(\S+)\s+https?(\:\/\/[\w\.]+\.[a-z\.]+[\/\w\.]*\-*\w+\=*\-*\.*\w+\.*\w*\.*)*[\?\S+]*\s+\S+\s+(\S+)\s+(\S+)', line) 
+        if pars_str:
+            re_date=pars_str.group(1).rstrip()
+            re_type=pars_str.group(2).rstrip()
+            line_url=pars_str.group(3).rstrip()
+            response_time=pars_str.group(5).rstrip()
+            re_code=pars_str.group(4).rstrip()
 
+            line_res=line_url
+            #if ignore_www or ignore_urls or ignore_files:
             if ignore_www:
-                line_res=line_res+line_url.replace("www.", "")
-            elif slow_queries:
-                if len(slow_url)<5:
-                    slow_url[line_url]=int(response_time)
-                    url_sum_time[line_url]=[int(response_time),1]
-                else:
-                    mas_key=sorted(slow_url, key=slow_url.get)
-                    for i in mas_key:
-                        if int(response_time)>int(slow_url[i]) and line_url !=i:
-                            url2[i]=slow_url[i]
-                            del slow_url[i]
-                            slow_url[line_url]=int(response_time)
-                            del url_sum_time[i]
-                            url_sum_time[line_url]=[int(response_time), 1]
-                            break
-                        elif line_url==i:
-                            url_sum_time[line_url][0]+=int(response_time)
-                            url_sum_time[line_url][1]+=1
-
-            elif request_type:
-                if re_type==request_type:
-                    line_res=line_res+line_url
-                else:
-                    line_res=''
-
-            elif ignore_urls:
-                if line_url==ignore_urls:
-                    line_res=''
-                else:
-                    line_res=line_res+line_url
-            elif ignore_files:
-                if re.search(r'([^\s]+(?=\.(jpg|gif|png|js))\.\2)', line_url):
-                    line_res=''
-                else:
-                    line_res=line_res+line_url
-            elif start_at or stop_at:
+                line_res=line_res.replace("www.", "") if re.search(r'\:\/\/www', line_url) else line_res
+            if ignore_urls:
+                line_res='' if line_res==ignore_urls else line_res
+            if ignore_files:
+                line_res='' if re.search(r'([^\s]+(?=\.(jpg|gif|png|js))\.\2)', line_res) else line_res
+            
+            if request_type:
+                line_res=line_res if re_type==reuest_type else ''
+            
+            if start_at or stop_at:
                 data_re=datetime.strptime(re_date, '%d/%b/%Y %H:%M:%S')
                 pattern=start_at if start_at else stop_at 
                 data1=datetime.strptime(pattern, '%d/%b/%Y %H:%M:%S')
                 if start_at:    
                     if data_re>=data1:
-                        line_res=line_res+line_url
+                        line_res=line_res
                 if stop_at:
                     if data_re<=data1:
-                        line_res=line_res+line_url
-            
-            else:   
-                line_res=line_res+line_url
-            
+                        line_res=line_res
             if line_res:
-                if line_res in url:
-                    url[line_res]=url[line_res]+1
-                else:
-                    url[line_res]=1
-            
-    if line_res:
-        for i in sorted(url, key=url.get, reverse=True):
-            if len(mas)<5:
-                mas.append(url[i])
-    elif url_sum_time:
-        for i in url_sum_time:
-            for j in url2:
-                if i==j:
-                    url_sum_time[i][0]+=url2[j]
-                    url_sum_time[i][1]+=1
-            mas.append(url_sum_time[i][0]//url_sum_time[i][1])
-        mas=sorted(mas, reverse=True)        
-    
-    return(mas)
+                mas_time.append(int(response_time))
+                mas.append(line_res)
+    dict_url=Counter(mas)
+    max_el=[]
+    max_i=[]
+    max_url=[]
+    if slow_queries:
+        for h in range(5):
+            time=0
+            max_el=max(mas_time)
+            max_i=mas_time.index(max_el)
+            max_url=mas[max_i]
 
+            for i in range(len(mas)):
+                if max_url==mas[i]:
+                    time+=mas_time[i]
+            result.append(time//dict_url[max_url])
+            result.sort(reverse=True)
+
+            mas_time.pop(max_i)        
+    else:
+        for i in sorted(dict_url, key=dict_url.get, reverse=True):
+            if len(result)<5:
+                result.append(dict_url[i])
+ 
+    return(result)

@@ -2,7 +2,7 @@
 #hash_log-хэш логов, ключи hash_log- урлы, сортируем их
 import re
 from datetime import datetime
-from collections import Counter
+import collections
 
 
 def parse(
@@ -17,7 +17,8 @@ def parse(
     mas=[]
     result=[]
     mas_time=[]
-    
+    url=collections.Counter()
+    time=collections.Counter()
     f=open('log.log')
     for line in f:
         
@@ -34,47 +35,43 @@ def parse(
             if ignore_www:
                 line_res=line_res.replace("www.", "") if re.search(r'\:\/\/www', line_url) else line_res
             if ignore_urls:
-                line_res='' if line_res==ignore_urls else line_res
+                if line_res==ignore_urls: 
+                    continue
+                else:
+                    line_res=line_res
+
             if ignore_files:
-                line_res='' if re.search(r'([^\s]+(?=\.(jpg|gif|png|js))\.\2)', line_res) else line_res
+                if re.search(r'(https?\:\/\/\S+(\.\w+)$)', line_res):
+                    continue    
+                else:
+                    line_res=line_res
             
             if request_type:
                 line_res=line_res if re_type==reuest_type else ''
             
             if start_at or stop_at:
                 data_re=datetime.strptime(re_date, '%d/%b/%Y %H:%M:%S')
-                pattern=start_at if start_at else stop_at 
-                data1=datetime.strptime(pattern, '%d/%b/%Y %H:%M:%S')
-                if start_at:    
+
+                if start_at:  
+                    data1=datetime.strptime(start_at, '%d/%b/%Y %H:%M:%S')
                     if data_re>=data1:
                         line_res=line_res
                 if stop_at:
+                    data1=datetime.strptime(stop_at, '%d/%b/%Y %H:%M:%S')
                     if data_re<=data1:
                         line_res=line_res
             if line_res:
-                mas_time.append(int(response_time))
-                mas.append(line_res)
-    dict_url=Counter(mas)
-    max_el=[]
-    max_i=[]
-    max_url=[]
+                url[line_res]+=1
+                time[line_res]+=int(response_time)
+    
+    
     if slow_queries:
-        for h in range(5):
-            time=0
-            max_el=max(mas_time)
-            max_i=mas_time.index(max_el)
-            max_url=mas[max_i]
-
-            for i in range(len(mas)):
-                if max_url==mas[i]:
-                    time+=mas_time[i]
-            result.append(time//dict_url[max_url])
+        for i in range(5):       
+            max_time=time.most_common(5) 
+            result.append(max_time[i][1]//url[(max_time[i][0])])
             result.sort(reverse=True)
-
-            mas_time.pop(max_i)        
     else:
-        for i in sorted(dict_url, key=dict_url.get, reverse=True):
-            if len(result)<5:
-                result.append(dict_url[i])
+        for i in range(5):
+            result.append(url.most_common(5)[i][1]) 
  
     return(result)

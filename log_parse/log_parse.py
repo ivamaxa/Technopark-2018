@@ -66,10 +66,10 @@ def parse(
     
     
     if slow_queries:
-        for i in range(5):       
-            max_time=time.most_common(5) 
-            result.append(max_time[i][1]//url[(max_time[i][0])])
+        for i in time.keys():
+            result.append(time[i]//url[i])
             result.sort(reverse=True)
+            result=result[0:5]
     else:
         for i in range(5):
             result.append(url.most_common(5)[i][1]) 

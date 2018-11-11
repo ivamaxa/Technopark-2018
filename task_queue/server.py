@@ -72,14 +72,14 @@ class TaskQueueServer:
             'time': None
 
         }
-        if dict_queue['queue'] not in self.queue_dict:
+        if not self.check(dict_queue['queue']):
             self.queue_dict[dict_queue['queue']] = deque()
             self.queue_get[dict_queue['queue']] = {}
         self.queue_dict[dict_queue['queue']].append(dict_queue)
         return str_id
 
     def get(self, queue):
-        if queue not in self.queue_dict or not len(self.queue_dict[queue]):
+        if not self.check(queue):
             conn.send(b'NONE')
         task = self.queue_dict[queue].popleft()
         task['time'] = datetime.now()
@@ -97,7 +97,7 @@ class TaskQueueServer:
         return ack_queue
 
     def in_queue(self, queue, str_id):
-        if queue not in self.queue_dict:
+        if not self.check(queue):
             return False
 
         queue_in = False
@@ -113,6 +113,13 @@ class TaskQueueServer:
         with open(os.path.join(self.path, 'queue'), 'wb') as f:
             pickle.dump(self.queue_dict, f)
         return True
+
+    def check(self, queue):
+        if queue not in self.queue_dict:
+            return False
+        return True
+
+
 
 
 def parse_args():

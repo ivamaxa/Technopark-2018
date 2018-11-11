@@ -110,7 +110,7 @@ class TaskQueueServer:
         return queue_in
 
     def save(self):
-        with open(os.path.join(self.path, 'log'), 'wb') as f:
+        with open(os.path.join(self.path, 'queue'), 'wb') as f:
             pickle.dump(self.queue_dict, f)
         return True
 

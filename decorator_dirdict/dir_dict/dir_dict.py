@@ -1,7 +1,8 @@
 import os
+import collections
 
 
-class DirDict:
+class DirDict(collections.MutableMapping):
     def __init__(self, path):
         self.path = path
 
@@ -31,6 +32,3 @@ class DirDict:
         return iter(os.listdir(self.path))
 
 
-#d = DirDict('/home/maha/python/dir_dict')
-#d['lang'] = 'Python\n'
-#del d['lang']

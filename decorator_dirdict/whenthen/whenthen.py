@@ -8,6 +8,8 @@ class Whenthen:
         self.num = -1
 
     def when(self, func):
+        if self.methods[self.num]['then'] is None:
+            raise ValueError
         self.methods.append({
             'when': func,
             'then': None
